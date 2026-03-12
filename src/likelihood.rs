@@ -1,7 +1,7 @@
-/// Likelihood functions for host galaxy association.
-///
-/// The primary likelihood is based on the fractional offset (separation / DLR)
-/// following a Gamma distribution, as described in Prost (Gagliano et al.).
+//! Likelihood functions for host galaxy association.
+//!
+//! The primary likelihood is based on the fractional offset (separation / DLR)
+//! following a Gamma distribution, as described in Prost (Gagliano et al.).
 
 /// Γ(0.75) — the gamma function evaluated at 0.75.
 const GAMMA_0_75: f64 = 1.2254167024651776;

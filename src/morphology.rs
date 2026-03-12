@@ -358,6 +358,7 @@ fn estimate_sersic_flux(i_eff: f64, r_eff: f64, n: f64, axis_ratio: f64) -> f64 
 }
 
 /// Solve a 7x7 linear system Ax = b via Gaussian elimination with partial pivoting.
+#[allow(clippy::needless_range_loop)]
 fn solve_7x7(a: &[[f64; 7]; 7], b: &[f64; 7]) -> Option<[f64; 7]> {
     let n = 7;
     let mut aug = [[0.0_f64; 8]; 7];

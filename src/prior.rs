@@ -1,4 +1,4 @@
-/// Prior distributions for host galaxy association.
+//! Prior distributions for host galaxy association.
 
 /// Uniform prior on fractional offset up to a maximum value.
 ///

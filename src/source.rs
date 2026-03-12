@@ -117,8 +117,8 @@ pub fn estimate_background(
     config: &ExtractionConfig,
 ) -> Result<Background, ProstError> {
     let mesh = config.back_size;
-    let ny = (cutout.height + mesh - 1) / mesh;
-    let nx = (cutout.width + mesh - 1) / mesh;
+    let ny = cutout.height.div_ceil(mesh);
+    let nx = cutout.width.div_ceil(mesh);
 
     let mut mesh_mean = vec![0.0_f64; ny * nx];
     let mut mesh_rms = vec![0.0_f64; ny * nx];

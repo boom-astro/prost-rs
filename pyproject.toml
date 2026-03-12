@@ -19,5 +19,9 @@ dev = [
     "astropy>=5.0",
 ]
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+
 [tool.setuptools.packages.find]
 include = ["prost*"]

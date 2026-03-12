@@ -187,6 +187,7 @@ impl Cutout {
     }
 
     /// Add a 2D Sérsic profile to the cutout (for generating test images).
+    #[allow(clippy::too_many_arguments)]
     pub fn add_sersic(
         &mut self,
         center_row: f64,
