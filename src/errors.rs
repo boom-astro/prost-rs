@@ -22,4 +22,7 @@ pub enum ProstError {
 
     #[error("morphology fitting failed: {0}")]
     MorphologyError(String),
+
+    #[error("BOOM API error: {0}")]
+    BoomError(String),
 }

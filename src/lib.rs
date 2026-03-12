@@ -12,5 +12,9 @@ pub mod cutout;
 pub mod morphology;
 pub mod source;
 
+// BOOM alert broker client (requires `catalogs` feature)
+#[cfg(feature = "catalogs")]
+pub mod boom;
+
 pub use associate::{associate_host, AssociationConfig, AssociationResult};
 pub use types::{GalaxyCandidate, HostCandidate, Transient};

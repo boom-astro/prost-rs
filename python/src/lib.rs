@@ -1157,6 +1157,314 @@ fn fit_sersic(
 }
 
 // ---------------------------------------------------------------------------
+// BOOM client
+// ---------------------------------------------------------------------------
+
+use prost_rs::boom::{BoomClient as RsBoomClient, BoomConfig as RsBoomConfig};
+
+#[pyclass(name = "BoomConfig")]
+#[derive(Clone)]
+pub struct PyBoomConfig {
+    #[pyo3(get, set)]
+    pub base_url: String,
+    #[pyo3(get, set)]
+    pub username: Option<String>,
+    #[pyo3(get, set)]
+    pub password: Option<String>,
+    #[pyo3(get, set)]
+    pub default_radius_arcsec: f64,
+    #[pyo3(get, set)]
+    pub default_catalog: String,
+    #[pyo3(get, set)]
+    pub min_b_arcsec: f64,
+}
+
+#[pymethods]
+impl PyBoomConfig {
+    #[new]
+    #[pyo3(signature = (base_url=None, username=None, password=None, default_radius_arcsec=60.0, default_catalog="LS_DR10", min_b_arcsec=0.05))]
+    fn new(
+        base_url: Option<String>,
+        username: Option<String>,
+        password: Option<String>,
+        default_radius_arcsec: f64,
+        default_catalog: &str,
+        min_b_arcsec: f64,
+    ) -> Self {
+        let default = RsBoomConfig::default();
+        Self {
+            base_url: base_url.unwrap_or(default.base_url),
+            username: username.or(default.username),
+            password: password.or(default.password),
+            default_radius_arcsec,
+            default_catalog: default_catalog.to_string(),
+            min_b_arcsec,
+        }
+    }
+
+    /// Create a config from environment variables (BOOM_USERNAME, BOOM_PASSWORD).
+    #[staticmethod]
+    fn from_env() -> Self {
+        let cfg = RsBoomConfig::from_env();
+        Self {
+            base_url: cfg.base_url,
+            username: cfg.username,
+            password: cfg.password,
+            default_radius_arcsec: cfg.default_radius_arcsec,
+            default_catalog: cfg.default_catalog,
+            min_b_arcsec: cfg.min_b_arcsec,
+        }
+    }
+
+    /// Create a config with explicit credentials.
+    #[staticmethod]
+    fn with_credentials(username: &str, password: &str) -> Self {
+        let cfg = RsBoomConfig::with_credentials(username, password);
+        Self {
+            base_url: cfg.base_url,
+            username: cfg.username,
+            password: cfg.password,
+            default_radius_arcsec: cfg.default_radius_arcsec,
+            default_catalog: cfg.default_catalog,
+            min_b_arcsec: cfg.min_b_arcsec,
+        }
+    }
+
+    /// Check whether credentials are available.
+    fn has_credentials(&self) -> bool {
+        self.username.is_some() && self.password.is_some()
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "BoomConfig(url={:?}, has_creds={}, radius={:.0}\")",
+            self.base_url, self.has_credentials(), self.default_radius_arcsec
+        )
+    }
+}
+
+impl PyBoomConfig {
+    fn to_rust(&self) -> RsBoomConfig {
+        RsBoomConfig {
+            base_url: self.base_url.clone(),
+            username: self.username.clone(),
+            password: self.password.clone(),
+            default_radius_arcsec: self.default_radius_arcsec,
+            default_catalog: self.default_catalog.clone(),
+            min_b_arcsec: self.min_b_arcsec,
+        }
+    }
+}
+
+#[pyclass(name = "BoomClient")]
+pub struct PyBoomClient {
+    client: RsBoomClient,
+    rt: tokio::runtime::Runtime,
+}
+
+#[pymethods]
+impl PyBoomClient {
+    /// Create a new BOOM client.
+    ///
+    /// Parameters
+    /// ----------
+    /// config : BoomConfig, optional
+    ///     Client configuration. Uses env-based defaults if not provided.
+    #[new]
+    #[pyo3(signature = (config=None))]
+    fn new(config: Option<&PyBoomConfig>) -> PyResult<Self> {
+        let rs_config = config
+            .map(|c| c.to_rust())
+            .unwrap_or_default();
+        let rt = tokio::runtime::Runtime::new()
+            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        Ok(Self {
+            client: RsBoomClient::new(rs_config),
+            rt,
+        })
+    }
+
+    /// Create a client with credentials from environment variables.
+    #[staticmethod]
+    fn from_env() -> PyResult<Self> {
+        let rt = tokio::runtime::Runtime::new()
+            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        Ok(Self {
+            client: RsBoomClient::from_env(),
+            rt,
+        })
+    }
+
+    /// Authenticate with the BOOM API.
+    fn authenticate(&mut self) -> PyResult<()> {
+        self.rt
+            .block_on(self.client.authenticate())
+            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+    }
+
+    /// Check whether the client has authenticated.
+    fn is_authenticated(&self) -> bool {
+        self.client.is_authenticated()
+    }
+
+    /// Get ZTF coordinates for an object by its objectId.
+    ///
+    /// Returns
+    /// -------
+    /// tuple[float, float]
+    ///     (ra, dec) in degrees.
+    fn get_ztf_coordinates(&self, object_id: &str) -> PyResult<(f64, f64)> {
+        self.rt
+            .block_on(self.client.get_ztf_coordinates(object_id))
+            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+    }
+
+    /// Cone search Legacy Survey (LS_DR10) for galaxies near a position.
+    ///
+    /// Parameters
+    /// ----------
+    /// name : str
+    ///     Object name (used as key in BOOM response).
+    /// ra, dec : float
+    ///     Search center in degrees.
+    /// radius_arcsec : float, optional
+    ///     Search radius. Uses config default if not provided.
+    ///
+    /// Returns
+    /// -------
+    /// list[dict]
+    ///     Raw catalog documents from BOOM.
+    #[pyo3(signature = (name, ra, dec, radius_arcsec=None))]
+    fn cone_search_ls(
+        &self,
+        py: Python<'_>,
+        name: &str,
+        ra: f64,
+        dec: f64,
+        radius_arcsec: Option<f64>,
+    ) -> PyResult<PyObject> {
+        let docs = self.rt
+            .block_on(self.client.cone_search_ls(name, ra, dec, radius_arcsec))
+            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        json_values_to_py(py, &docs)
+    }
+
+    /// Cone search NED for galaxy redshifts and types.
+    #[pyo3(signature = (name, ra, dec, radius_arcsec=None))]
+    fn cone_search_ned(
+        &self,
+        py: Python<'_>,
+        name: &str,
+        ra: f64,
+        dec: f64,
+        radius_arcsec: Option<f64>,
+    ) -> PyResult<PyObject> {
+        let docs = self.rt
+            .block_on(self.client.cone_search_ned(name, ra, dec, radius_arcsec))
+            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        json_values_to_py(py, &docs)
+    }
+
+    /// Query BOOM for a ZTF transient and return galaxy candidates.
+    ///
+    /// High-level method: looks up coordinates, runs LS cone search,
+    /// and converts results to GalaxyCandidate objects.
+    ///
+    /// Parameters
+    /// ----------
+    /// object_id : str
+    ///     ZTF object ID (e.g., "ZTF20aajnksq").
+    /// radius_arcsec : float, optional
+    ///     Search radius. Uses config default if not provided.
+    ///
+    /// Returns
+    /// -------
+    /// tuple[tuple[float, float], list[GalaxyCandidate]]
+    ///     ((ra, dec), candidates) — transient coordinates and galaxy candidates.
+    #[pyo3(signature = (object_id, radius_arcsec=None))]
+    fn get_candidates(
+        &self,
+        object_id: &str,
+        radius_arcsec: Option<f64>,
+    ) -> PyResult<((f64, f64), Vec<PyGalaxyCandidate>)> {
+        let ((ra, dec), candidates) = self.rt
+            .block_on(self.client.get_candidates(object_id, radius_arcsec))
+            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+
+        let py_candidates: Vec<PyGalaxyCandidate> = candidates.into_iter().map(|g| {
+            PyGalaxyCandidate {
+                ra: g.ra,
+                dec: g.dec,
+                a_arcsec: g.a_arcsec,
+                b_arcsec: g.b_arcsec,
+                pa_deg: g.pa_deg,
+                redshift: g.redshift,
+                redshift_err: g.redshift_err,
+                mag: g.mag,
+                mag_err: g.mag_err,
+                objtype: g.objtype,
+                objname: g.objname,
+                catalog: g.catalog,
+                shape_from_image: g.shape_from_image,
+            }
+        }).collect();
+
+        Ok(((ra, dec), py_candidates))
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "BoomClient(authenticated={})",
+            self.client.is_authenticated()
+        )
+    }
+}
+
+/// Convert serde_json::Value array to Python list of dicts.
+fn json_values_to_py(py: Python<'_>, values: &[serde_json::Value]) -> PyResult<PyObject> {
+    use pyo3::types::PyList;
+
+    let items: Vec<PyObject> = values
+        .iter()
+        .map(|v| json_value_to_py(py, v))
+        .collect::<PyResult<_>>()?;
+    Ok(PyList::new(py, &items)?.into_any().unbind())
+}
+
+fn json_value_to_py(py: Python<'_>, value: &serde_json::Value) -> PyResult<PyObject> {
+    use pyo3::types::{PyDict as PyDictType, PyList};
+
+    match value {
+        serde_json::Value::Null => Ok(py.None()),
+        serde_json::Value::Bool(b) => Ok(b.into_pyobject(py).map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?.to_owned().into_any().unbind()),
+        serde_json::Value::Number(n) => {
+            if let Some(i) = n.as_i64() {
+                Ok(i.into_pyobject(py)?.into_any().unbind())
+            } else if let Some(f) = n.as_f64() {
+                Ok(f.into_pyobject(py)?.into_any().unbind())
+            } else {
+                Ok(py.None())
+            }
+        }
+        serde_json::Value::String(s) => Ok(s.into_pyobject(py)?.into_any().unbind()),
+        serde_json::Value::Array(arr) => {
+            let items: Vec<PyObject> = arr
+                .iter()
+                .map(|v| json_value_to_py(py, v))
+                .collect::<PyResult<_>>()?;
+            Ok(PyList::new(py, &items)?.into_any().unbind())
+        }
+        serde_json::Value::Object(map) => {
+            let dict = PyDictType::new(py);
+            for (k, v) in map {
+                dict.set_item(k, json_value_to_py(py, v)?)?;
+            }
+            Ok(dict.into_any().unbind())
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Module
 // ---------------------------------------------------------------------------
 
@@ -1184,5 +1492,8 @@ fn prost_extension(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(fit_sersic, m)?)?;
     m.add_function(wrap_pyfunction!(sersic_profile, m)?)?;
     m.add_function(wrap_pyfunction!(elliptical_radius, m)?)?;
+    // BOOM client
+    m.add_class::<PyBoomConfig>()?;
+    m.add_class::<PyBoomClient>()?;
     Ok(())
 }

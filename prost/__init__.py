@@ -41,6 +41,9 @@ from ._prost import (
     extract_sources,
     estimate_background,
     fit_sersic,
+    # BOOM client
+    BoomConfig,
+    BoomClient,
 )
 
 __all__ = [
@@ -66,4 +69,7 @@ __all__ = [
     "extract_sources",
     "estimate_background",
     "fit_sersic",
+    # BOOM client
+    "BoomConfig",
+    "BoomClient",
 ]

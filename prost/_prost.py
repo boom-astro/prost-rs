@@ -35,3 +35,7 @@ SersicFit = _ext.SersicFit
 extract_sources = _ext.extract_sources
 estimate_background = _ext.estimate_background
 fit_sersic = _ext.fit_sersic
+
+# BOOM client
+BoomConfig = _ext.BoomConfig
+BoomClient = _ext.BoomClient
