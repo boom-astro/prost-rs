@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=64", "numpy>=1.20"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "prost"
+version = "0.1.0"
+description = "Probabilistic host galaxy association for astronomical transients"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+dependencies = [
+    "numpy>=1.20",
+]
+
+[project.optional-dependencies]
+rust = ["prost-python"]
+dev = [
+    "pytest>=7.0",
+    "astropy>=5.0",
+]
+
+[tool.setuptools.packages.find]
+include = ["prost*"]

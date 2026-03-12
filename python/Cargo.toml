@@ -1,0 +1,13 @@
+[package]
+name = "prost-python"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "prost_extension"
+crate-type = ["cdylib"]
+
+[dependencies]
+prost-rs = { path = ".." }
+pyo3 = { version = "0.24", features = ["extension-module"] }
+numpy = "0.24"

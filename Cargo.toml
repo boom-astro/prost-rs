@@ -1,0 +1,39 @@
+[package]
+name = "prost-rs"
+version = "0.1.0"
+edition = "2021"
+description = "Probabilistic host galaxy association for astronomical transients"
+license = "MIT"
+
+[dependencies]
+# Numerics
+ndarray = "0.16"
+rand = "0.9"
+rand_distr = "0.5"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Astronomy
+# sep-rs or fitsio can be added later for image-based analysis
+
+# HTTP for catalog queries
+reqwest = { version = "0.12", features = ["json"], optional = true }
+tokio = { version = "1", features = ["rt-multi-thread", "macros"], optional = true }
+
+# Parallelism
+rayon = "1.10"
+
+# Error handling
+thiserror = "2"
+
+[features]
+default = []
+catalogs = ["reqwest", "tokio"]
+
+[dev-dependencies]
+approx = "0.5"
+reqwest = { version = "0.12", features = ["json"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+serde_json = "1.0"
