@@ -1,6 +1,6 @@
 site_name: prost
 site_description: Probabilistic host galaxy association for astronomical transients
-repo_url: https://github.com/mcoughli/prost-rs
+repo_url: https://github.com/boom-astro/prost-rs
 
 theme:
   name: material

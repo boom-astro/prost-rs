@@ -3,7 +3,7 @@
 ## Development Setup
 
 ```bash
-git clone https://github.com/mcoughli/prost-rs.git
+git clone https://github.com/boom-astro/prost-rs.git
 cd prost-rs
 
 # Rust tests

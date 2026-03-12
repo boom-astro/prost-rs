@@ -6,7 +6,7 @@
 
 ```bash
 # Clone the repository
-git clone https://github.com/mcoughli/prost-rs.git
+git clone https://github.com/boom-astro/prost-rs.git
 cd prost-rs
 
 # Build and install the Rust extension
@@ -43,13 +43,13 @@ If you only need the Rust crate (e.g., for integration into another Rust project
 ```toml
 # In your Cargo.toml
 [dependencies]
-prost-rs = { git = "https://github.com/mcoughli/prost-rs.git" }
+prost-rs = { git = "https://github.com/boom-astro/prost-rs.git" }
 ```
 
 To enable HTTP-based catalog queries (reqwest + tokio):
 
 ```toml
-prost-rs = { git = "https://github.com/mcoughli/prost-rs.git", features = ["catalogs"] }
+prost-rs = { git = "https://github.com/boom-astro/prost-rs.git", features = ["catalogs"] }
 ```
 
 ## HPC Clusters

@@ -35,7 +35,7 @@ print(f"P(host) = {result.best_host.posterior:.3f}")
 
 ```bash
 # Requires Rust toolchain: https://rustup.rs/
-git clone https://github.com/mcoughli/prost-rs.git
+git clone https://github.com/boom-astro/prost-rs.git
 cd prost-rs
 pip install ./python
 pip install -e .
