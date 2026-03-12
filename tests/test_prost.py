@@ -128,9 +128,8 @@ class TestAssociation:
 
     def test_empty_candidates(self):
         t = Transient(ra=180.0, dec=45.0)
-        result = associate_host(t, [])
-        assert len(result) == 0
-        assert result.p_none == pytest.approx(1.0)
+        with pytest.raises(ValueError):
+            associate_host(t, [])
 
     def test_config(self):
         cfg = AssociationConfig(max_fractional_offset=5.0, max_candidates=3)
